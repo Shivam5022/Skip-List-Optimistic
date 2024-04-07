@@ -25,31 +25,21 @@ struct Node {
     }
 };
 
-
 // add, remove and contains ->
 // add(v): adds v to the set and returns true iff v was not already in the set; 
 // remove(v): removes v from the set and returns true iff v was in the set; 
 // contains(v): returns true iff v is in the set;
 
 class OptimisticSkipList {
-public:
+
+private:
     std::shared_ptr<Node> head;
-
-    OptimisticSkipList() {
-        auto h = std::make_shared<Node>(128, true, std::numeric_limits<int>::min());
-        auto t = std::make_shared<Node>(128, true, std::numeric_limits<int>::max());
-
-        for (int i = 0; i < 128; ++i) {
-            h->nexts[i] = t;
-        }
-
-        head = h;
-    }
+    const int maxHeight = 128;
 
     int findNode(int v, std::vector<std::shared_ptr<Node>>& preds, std::vector<std::shared_ptr<Node>>& succs) {
         auto pred = head;
         int found = -1;
-        for (int layer = 127; layer >= 0; --layer) {
+        for (int layer = maxHeight - 1; layer >= 0; --layer) {
             auto curr = pred->nexts[layer];
             while (curr->value < v) {
                 pred = curr;
@@ -64,17 +54,44 @@ public:
         return found;
     }
 
-    int randomLevel(int maxHeight) {
+    int randomLevel(int foo) {
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::uniform_int_distribution<> dis(0, maxHeight - 1);
+        std::uniform_int_distribution<> dis(0, foo - 1);
         return dis(gen);
     }
 
+    bool okToDelete(std::shared_ptr<Node> candidate, int l) {
+        return candidate->fullyLinked && candidate->topLayer == l && !candidate->removed;
+    }
+
+    void unlock(std::vector<std::shared_ptr<Node>>& preds, int highestLocked) {
+        std::shared_ptr<Node> prevPred, pred;
+        for (int layer = 0; layer <= highestLocked; ++layer) {
+            pred = preds[layer];
+            if (pred != prevPred) {
+                pred->lock.unlock();
+            }
+            prevPred = pred;
+        }
+    }
+
+public:
+    OptimisticSkipList() {
+        auto h = std::make_shared<Node>(maxHeight, true, std::numeric_limits<int>::min());
+        auto t = std::make_shared<Node>(maxHeight, true, std::numeric_limits<int>::max());
+
+        for (int i = 0; i < maxHeight; ++i) {
+            h->nexts[i] = t;
+        }
+
+        head = h;
+    }
+
     void add(int v) {
-        int topLayer = randomLevel(128);
-        std::vector<std::shared_ptr<Node>> preds(128);
-        std::vector<std::shared_ptr<Node>> succs(128);
+        int topLayer = randomLevel(maxHeight);
+        std::vector<std::shared_ptr<Node>> preds(maxHeight);
+        std::vector<std::shared_ptr<Node>> succs(maxHeight);
         while (true) {
             int found = findNode(v, preds, succs);
             if (found != -1) {
@@ -116,8 +133,8 @@ public:
         std::shared_ptr<Node> nodeToDelete;
         bool isremoved = false;
         int topLayer = -1;
-        std::vector<std::shared_ptr<Node>> preds(128);
-        std::vector<std::shared_ptr<Node>> succs(128);
+        std::vector<std::shared_ptr<Node>> preds(maxHeight);
+        std::vector<std::shared_ptr<Node>> succs(maxHeight);
         while (true) {
             int found = findNode(v, preds, succs);
             if (isremoved || (found != -1 && okToDelete(succs[found], found))) {
@@ -161,24 +178,9 @@ public:
         }
     }
 
-    bool okToDelete(std::shared_ptr<Node> candidate, int l) {
-        return candidate->fullyLinked && candidate->topLayer == l && !candidate->removed;
-    }
-
-    void unlock(std::vector<std::shared_ptr<Node>>& preds, int highestLocked) {
-        std::shared_ptr<Node> prevPred, pred;
-        for (int layer = 0; layer <= highestLocked; ++layer) {
-            pred = preds[layer];
-            if (pred != prevPred) {
-                pred->lock.unlock();
-            }
-            prevPred = pred;
-        }
-    }
-
     bool contains(int v) {
-        std::vector<std::shared_ptr<Node>> preds(128);
-        std::vector<std::shared_ptr<Node>> succs(128);
+        std::vector<std::shared_ptr<Node>> preds(maxHeight);
+        std::vector<std::shared_ptr<Node>> succs(maxHeight);
         int found = findNode(v, preds, succs);
         return found != -1 && succs[found]->fullyLinked && !succs[found]->removed;
     }
