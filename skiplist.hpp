@@ -88,7 +88,7 @@ public:
         head = h;
     }
 
-    void add(int v) {
+    bool add(int v) {
         int topLayer = randomLevel(maxHeight);
         std::vector<std::shared_ptr<Node>> preds(maxHeight);
         std::vector<std::shared_ptr<Node>> succs(maxHeight);
@@ -97,7 +97,7 @@ public:
             if (found != -1) {
                 auto nodeFound = succs[found];
                 if (!nodeFound->removed) {
-                    return;
+                    return false;
                 }
                 continue;
             }
@@ -125,11 +125,11 @@ public:
             }
             newNode->fullyLinked = true;
             unlock(preds, highestLocked);
-            return;
+            return true;
         }
     }
 
-    void remove(int v) {
+    bool remove(int v) {
         std::shared_ptr<Node> nodeToDelete;
         bool isremoved = false;
         int topLayer = -1;
@@ -171,9 +171,9 @@ public:
                 }
                 unlock(preds, highestLocked);
                 nodeToDelete->lock.unlock();
-                return;
+                return true;
             } else {
-                return;
+                return false;
             }
         }
     }

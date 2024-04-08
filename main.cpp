@@ -2,7 +2,6 @@
 #include <thread>
 #include <vector>
 #include <utility>
-#include <format>
 #include <chrono>
 #include <random>
 #include <mutex>
@@ -10,7 +9,7 @@
 #include "skiplist.hpp"
 
 constexpr int keyRange = 200000;
-constexpr int operations = 100000;
+constexpr int operations = 10000;
 constexpr int ADD = 9;
 constexpr int REMOVE = 1;
 constexpr int CONTAINS = 90;
@@ -35,7 +34,7 @@ void testThroughput(OptimisticSkipList skipList) {
 
 void testAndPlot() {
 
-    std::vector<int> numThreads = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::vector<int> numThreads = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
 
     std::vector<std::pair<int, int>> plot;
 
@@ -53,14 +52,16 @@ void testAndPlot() {
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         double throughput = (f * operations) / duration;
-        // std::cout << "Throughput for " << f << " threads with range of keys " << keyRange << ": " << throughput << " ops/ms" << std::endl;
         plot.emplace_back(f, throughput);
     }
 
-    std::cout << std::format("Throughput in operations per millisecond of {} operations, with {}% ‘add’, {}% ‘remove’, and {}% ‘contains’ operations. With key in range [0, {}]", operations, ADD, REMOVE, CONTAINS, keyRange) << std::endl;
+    std::cout << "Throughput in operations per millisecond for per thread " << operations 
+              << " operations, with " << ADD << "% 'add', " 
+              << REMOVE << "% 'remove', and " << CONTAINS << "% 'contains' operations. "
+              << "With key in range [0, " << keyRange << "]" << std::endl;    
     std::cout << "Number of Threads vs Throughput (in operations per milliseconds): \n";
-    for (auto [x, y]: plot) {
-        std::cout << x << ' ' << y << '\n';
+    for (auto f: plot) {
+        std::cout << f.first << ' ' << f.second << '\n';
     }
     std::cout << "[";
     for (int i = 0; i < (int) plot.size(); i++) {
