@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++20 -Wall
+CXXFLAGS = -std=c++11 -Wall -lpthread
 SRC = main.cpp 
 TARGET = prog
 

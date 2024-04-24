@@ -5,6 +5,7 @@
 #include <random>
 #include <vector>
 #include <mutex>
+#include <fstream>
 
 struct Node;
 
@@ -35,7 +36,7 @@ class OptimisticSkipList {
 private:
     std::shared_ptr<Node> head;
     const int maxHeight = 128;
-
+    
     int findNode(int v, std::vector<std::shared_ptr<Node>>& preds, std::vector<std::shared_ptr<Node>>& succs) {
         auto pred = head;
         int found = -1;
@@ -97,6 +98,7 @@ public:
             if (found != -1) {
                 auto nodeFound = succs[found];
                 if (!nodeFound->removed) {
+                    while (!nodeFound->fullyLinked) {}
                     return false;
                 }
                 continue;
@@ -118,11 +120,16 @@ public:
                 unlock(preds, highestLocked);
                 continue;
             }
-            auto newNode = std::make_shared<Node>(topLayer, true, v);
+
+            auto newNode = std::make_shared<Node>(topLayer, false, v);
+
             for (int layer = 0; layer <= topLayer; ++layer) {
                 newNode->nexts[layer] = succs[layer];
+            }
+            for (int layer = 0; layer <= topLayer; ++layer) {
                 preds[layer]->nexts[layer] = newNode;
             }
+
             newNode->fullyLinked = true;
             unlock(preds, highestLocked);
             return true;
@@ -144,7 +151,7 @@ public:
                     nodeToDelete->lock.lock();
                     if (nodeToDelete->removed) {
                         nodeToDelete->lock.unlock();
-                        return;
+                        return false;
                     }
                     nodeToDelete->removed = true;
                     isremoved = true;
@@ -169,8 +176,11 @@ public:
                 for (int layer = topLayer; layer >= 0; --layer) {
                     preds[layer]->nexts[layer] = nodeToDelete->nexts[layer];
                 }
-                unlock(preds, highestLocked);
+
                 nodeToDelete->lock.unlock();
+                nodeToDelete.reset();
+                
+                unlock(preds, highestLocked);
                 return true;
             } else {
                 return false;
@@ -182,6 +192,7 @@ public:
         std::vector<std::shared_ptr<Node>> preds(maxHeight);
         std::vector<std::shared_ptr<Node>> succs(maxHeight);
         int found = findNode(v, preds, succs);
-        return found != -1 && succs[found]->fullyLinked && !succs[found]->removed;
+        bool f =  ((found != -1) && (succs[found]->fullyLinked) && (!succs[found]->removed));
+        return f;
     }
 };
